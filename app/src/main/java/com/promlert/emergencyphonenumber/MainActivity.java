@@ -15,7 +15,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-    private ArrayList<Category> mCategoryList;
+    //private ArrayList<Category> mCategoryList;
     private ViewPager mViewPager;
 
     @Override
@@ -24,9 +24,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         App app = App.getInstance();
-
         if (app.getPhoneData() != null) {
-            mCategoryList = app.getPhoneData();
+            //mCategoryList = app.getPhoneData();
             setupViewPagerAndTabs();
         } else {
             final ProgressDialog progressDialog = ProgressDialog.show(
@@ -39,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
             app.loadPhoneData(new App.LoadPhoneDataCallback() {
                 @Override
                 public void onLoadFinish(ArrayList<Category> categoryList) {
-                    mCategoryList = categoryList;
+                    //mCategoryList = categoryList;
                     progressDialog.dismiss();
                     setupViewPagerAndTabs();
                 }

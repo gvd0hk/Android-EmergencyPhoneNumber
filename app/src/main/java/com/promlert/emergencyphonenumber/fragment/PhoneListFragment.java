@@ -1,5 +1,6 @@
 package com.promlert.emergencyphonenumber.fragment;
 
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -17,6 +18,7 @@ import android.widget.TextView;
 import com.promlert.emergencyphonenumber.App;
 import com.promlert.emergencyphonenumber.R;
 import com.promlert.emergencyphonenumber.adapter.MyListAdapter;
+import com.promlert.emergencyphonenumber.model.Category;
 import com.promlert.emergencyphonenumber.model.PhoneNumber;
 
 import java.util.ArrayList;
@@ -54,20 +56,44 @@ public class PhoneListFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_phone_list, container, false);
     }
 
     @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(final View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        TextView categoryTitleTextView = (TextView) view.findViewById(R.id.category_title_text_view);
-        categoryTitleTextView.setText(mApp.getPhoneData().get(mCategoryListIndex).title);
+        /* ถ้าหากแอคทิวิตีถูกสร้างขึ้นใหม่หลังจาก config change หรือโปรเซสถูกทำลาย
+           โค้ดส่วนนี้จะทำก่อนโหลดข้อมูลในแอคทิวิตี ดังนั้นต้องเช็คและโหลดข้อมูลตรงนี้ */
 
-        final ArrayList<PhoneNumber> phoneNumberList = mApp.getPhoneData().get(mCategoryListIndex).phoneNumberList;
+        final ArrayList<Category> categoryList = mApp.getPhoneData();
+        if (categoryList != null) {
+            setupViews(view, categoryList);
+        } else {
+            final ProgressDialog progressDialog = ProgressDialog.show(
+                    getActivity(),
+                    null,
+                    "รอสักครู่",
+                    true,
+                    false
+            );
+            mApp.loadPhoneData(new App.LoadPhoneDataCallback() {
+                @Override
+                public void onLoadFinish(ArrayList<Category> categoryList) {
+                    progressDialog.dismiss();
+                    setupViews(view, categoryList);
+                }
+            });
+        }
+    }
 
-        ListView phoneNumberListView = (ListView) view.findViewById(R.id.phone_number_list_view);
+    private void setupViews(View rootView, ArrayList<Category> categoryList) {
+        TextView categoryTitleTextView = (TextView) rootView.findViewById(R.id.category_title_text_view);
+        categoryTitleTextView.setText(categoryList.get(mCategoryListIndex).title);
+
+        final ArrayList<PhoneNumber> phoneNumberList = categoryList.get(mCategoryListIndex).phoneNumberList;
+
+        ListView phoneNumberListView = (ListView) rootView.findViewById(R.id.phone_number_list_view);
         MyListAdapter adapter = new MyListAdapter(
                 getContext(),
                 R.layout.item_phone_number,

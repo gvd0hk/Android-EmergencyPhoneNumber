@@ -8,8 +8,8 @@
     <TextView
         android:id="@+id/category_title_text_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/colorAccent"
+        android:layout_height="0dp"
+        android:background="@color/color_accent"
         android:gravity="center_horizontal"
         android:padding="6dp"
         android:textColor="@android:color/white"

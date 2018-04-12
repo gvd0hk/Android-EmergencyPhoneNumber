@@ -10,7 +10,7 @@ public class Category {
 
     public final long id;
     public final String title;
-    public final ArrayList<PhoneNumber> phoneNumberList = new ArrayList<>();
+    public final ArrayList<PhoneItem> phoneItemList = new ArrayList<>();
 
     public Category(long id, String title) {
         this.id = id;

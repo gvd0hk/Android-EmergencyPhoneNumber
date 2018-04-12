@@ -3,6 +3,7 @@ package com.promlert.emergencyphonenumber.fragment;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -11,7 +12,13 @@ import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.LayoutAnimationController;
+import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -19,9 +26,10 @@ import com.promlert.emergencyphonenumber.App;
 import com.promlert.emergencyphonenumber.R;
 import com.promlert.emergencyphonenumber.adapter.MyListAdapter;
 import com.promlert.emergencyphonenumber.model.Category;
-import com.promlert.emergencyphonenumber.model.PhoneNumber;
+import com.promlert.emergencyphonenumber.model.PhoneItem;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class PhoneListFragment extends Fragment {
 
@@ -91,37 +99,136 @@ public class PhoneListFragment extends Fragment {
         TextView categoryTitleTextView = (TextView) rootView.findViewById(R.id.category_title_text_view);
         categoryTitleTextView.setText(categoryList.get(mCategoryListIndex).title);
 
-        final ArrayList<PhoneNumber> phoneNumberList = categoryList.get(mCategoryListIndex).phoneNumberList;
+        final ArrayList<PhoneItem> phoneItemList = categoryList.get(mCategoryListIndex).phoneItemList;
 
         ListView phoneNumberListView = (ListView) rootView.findViewById(R.id.phone_number_list_view);
         MyListAdapter adapter = new MyListAdapter(
                 getContext(),
                 R.layout.item_phone_number,
-                phoneNumberList
+                phoneItemList
         );
         phoneNumberListView.setAdapter(adapter);
 
         phoneNumberListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                makePhoneCall(phoneNumberList.get(position));
+                //makePhoneCall(phoneItemList.get(position));
+                showChooseNumberDialog(phoneItemList.get(position));
             }
         });
+
+        //animateListView(phoneNumberListView);
     }
 
-    private void makePhoneCall(final PhoneNumber phoneNumber) {
-        new AlertDialog.Builder(getContext())
-                .setTitle("ยืนยันโทรออก")
-                .setMessage("ต้องการโทรไปยัง \"" + phoneNumber.title + "\" (" + phoneNumber.number + ") ใช่หรือไม่?")
-                .setPositiveButton("ใช่", new DialogInterface.OnClickListener() {
+    private void showChooseNumberDialog(final PhoneItem phoneItem) {
+        String titleTemp = phoneItem.title;
+        if (phoneItem.categoryId == 3) {
+            titleTemp = String.format(Locale.getDefault(), "ศูนย์รับแจ้งเหตุฉุกเฉิน จ.%s", phoneItem.title);
+        }
+        final String title = titleTemp;
+
+        if (phoneItem.number.length() > 12) {
+            int lastIndexOfDash = phoneItem.number.lastIndexOf('-');
+            if (lastIndexOfDash != -1) {
+                String end = phoneItem.number.substring(lastIndexOfDash + 1);
+                int numDigit = end.length();
+                if (numDigit <= 2) {
+                    String mainNumber = phoneItem.number.substring(0, lastIndexOfDash - numDigit);
+                    String start = phoneItem.number.substring(lastIndexOfDash - numDigit, lastIndexOfDash);
+
+                    ArrayList<String> phoneNumberList = new ArrayList<>();
+                    for (int i = Integer.valueOf(start); i <= Integer.valueOf(end); i++) {
+                        phoneNumberList.add(mainNumber + String.format(
+                                Locale.getDefault(), "%" + String.valueOf(numDigit) + "s", i).replace(' ', '0')
+                        );
+                    }
+
+/*
+                    for (String s : phoneNumberList) {
+                        Log.i(TAG, s);
+                    }
+*/
+
+                    String[] phoneNumbersTemp = new String[phoneNumberList.size()];
+                    phoneNumbersTemp = phoneNumberList.toArray(phoneNumbersTemp);
+                    final String[] phoneNumbers = phoneNumbersTemp;
+
+                    new AlertDialog.Builder(getContext())
+                            .setTitle("เลือกเบอร์โทร")
+                            .setItems(phoneNumbers, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    makePhoneCall(
+                                            title,
+                                            phoneNumbers[i],
+                                            phoneItem.getImageDrawable(getContext())
+                                    );
+                                }
+                            })
+                            .show();
+                } else {
+                    makePhoneCall(
+                            title, phoneItem.number, phoneItem.getImageDrawable(getContext())
+                    );
+                }
+            } else {
+                makePhoneCall(
+                        title, phoneItem.number, phoneItem.getImageDrawable(getContext())
+                );
+            }
+        } else {
+            makePhoneCall(
+                    title, phoneItem.number, phoneItem.getImageDrawable(getContext())
+            );
+        }
+    }
+
+    private void makePhoneCall(String title, final String number, Drawable logo) {
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_confirm_call, null);
+
+        ImageView logoImageView = dialogView.findViewById(R.id.logo_image_view);
+        logoImageView.setImageDrawable(logo);
+
+        String confirmMessage = String.format(
+                Locale.getDefault(),
+                "ต้องการโทรไปยัง %s (%s) หรือไม่?",
+                title, number
+        );
+        TextView confirmMessageTextView = dialogView.findViewById(R.id.confirm_message_text_view);
+        confirmMessageTextView.setText(confirmMessage);
+
+        new AlertDialog.Builder(getContext(), R.style.AlertDialogTheme)
+                /*.setTitle("ยืนยันโทรออก")*/
+                .setView(dialogView)
+                /*.setMessage("ต้องการโทรไปยัง \"" + phoneItem.title + "\" (" + phoneItem.number + ") ใช่หรือไม่?")*/
+                .setPositiveButton("โทร", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Intent intent = new Intent(Intent.ACTION_CALL);
-                        intent.setData(Uri.parse("tel:" + phoneNumber.number));
+                        intent.setData(Uri.parse("tel:" + number));
                         startActivity(intent);
                     }
                 })
                 .setNegativeButton("ยกเลิก", null)
                 .show();
+    }
+
+    private void animateListView(ListView listView) {
+        AnimationSet set = new AnimationSet(true);
+
+        Animation animation = new AlphaAnimation(0.0f, 1.0f);
+        animation.setDuration(300);
+        set.addAnimation(animation);
+
+        animation = new TranslateAnimation(
+                Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF, 0.0f,
+                Animation.RELATIVE_TO_SELF, -1.0f, Animation.RELATIVE_TO_SELF, 0.0f
+        );
+        animation.setDuration(300);
+        set.addAnimation(animation);
+
+        LayoutAnimationController controller = new LayoutAnimationController(set, 0.25f);
+        listView.setLayoutAnimation(controller);
     }
 }
